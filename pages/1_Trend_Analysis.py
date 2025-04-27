@@ -79,9 +79,26 @@ if uploaded_file:
 
     # Download Results
     if results:
-        result_df = pd.DataFrame.from_dict(results, orient='index', columns=["Details"])
-        st.download_button("Download Results as CSV", result_df.to_csv().encode('utf-8'), file_name='trend_analysis_results.csv')
+    # Process results into a simple flat dictionary
+    flat_results = {}
 
-else:
-    st.warning("Please upload a CSV file to proceed.")
+    for method, output in results.items():
+        if hasattr(output, 'trend'):  # Mann-Kendall output
+            flat_results[method] = f"Trend: {output.trend}, p-value: {output.p:.5f}"
+        elif isinstance(output, tuple):  # tuples (Sen’s slope, Spearman)
+            flat_results[method] = f"Value: {output[0]:.5f}, p-value: {output[1]:.5f}"
+        else:
+            flat_results[method] = str(output)  # fallback
 
+    # Now create DataFrame
+    result_df = pd.DataFrame.from_dict(flat_results, orient='index', columns=["Details"])
+
+    # Show Dataframe
+    st.dataframe(result_df)
+
+    # Download Button
+    st.download_button(
+        "Download Trend Results as CSV",
+        result_df.to_csv().encode('utf-8'),
+        file_name='trend_analysis_results.csv'
+    )
